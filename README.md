@@ -1,6 +1,6 @@
 # Image to ASCII Converter
 
-This is a simple command-line tool written in Rust for converting images to ASCII art.
+This is a simple tool written in Rust for converting images to ASCII art.
 
 ## Prerequisites
 
