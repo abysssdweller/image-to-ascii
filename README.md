@@ -20,9 +20,7 @@ This is a simple command-line tool written in Rust for converting images to ASCI
 
 To run the program, execute the following command:
 
-``` cargo run --release -- <input_image_path> <resolution>```
-
-NOTE: Replace <input_image_path> with the path to your input image and <resolution> with the desired resolution for the ASCII art.
+``` cargo run ```
 
 IMPORTANT: The resolution parameter represents the divisor of the original image's dimensions. So, when you input a smaller value, such as 1, you effectively divide the original dimensions by 1, resulting in the original size. I recommend choosing a value between 1 and 10 (depending on your image's resolution).
 
