@@ -1,15 +1,13 @@
+extern crate gtk;
+extern crate gio;
 extern crate image;
 extern crate time;
-extern crate open;
 
-use std::error::Error;
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::Path;
-use image::{DynamicImage, GenericImageView};
-use time::PreciseTime;
-use image::imageops::FilterType;
-
+use gtk::prelude::*;
+use gtk::{Application, ApplicationWindow, Button, FileChooserAction, FileChooserDialog, TextView, ScrolledWindow, WindowPosition};
+use gio::prelude::*;
+use image::{DynamicImage, GenericImageView, imageops::FilterType};
+use time::Instant;
 
 const ASCII_CHARS: [char; 11] = ['@', '#', '0', 'O', 'L', ';', ':', '.', ',', '\'', ' '];
 
@@ -17,7 +15,7 @@ fn convert_to_ascii(image: DynamicImage, resolution: u32) -> String {
     let mut ascii_art = String::new();
     let (width, height) = image.dimensions();
     let small_image = image.resize_exact(width / resolution, height / resolution, FilterType::Nearest);
-    
+
     for y in 0..small_image.height() {
         for x in 0..small_image.width() {
             let pixel = small_image.get_pixel(x, y);
@@ -27,45 +25,82 @@ fn convert_to_ascii(image: DynamicImage, resolution: u32) -> String {
         }
         ascii_art.push('\n');
     }
-    
+
     ascii_art
 }
 
-fn write_to_file(file_name: &str, contents: &str) -> Result<(), Box<dyn Error>> {
-    let mut file = File::create(file_name)?;
-    file.write_all(contents.as_bytes())?;
-    Ok(())
-}
-
 fn main() {
-    
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 3 {
-        println!("Usage: {} <input_image_path> <resolution>", args[0]);
-        return;
-    }
+    let application = Application::new(
+        Some("com.example.ascii_app"),
+                                       Default::default(),
+    )
+    .expect("Failed to initialize GTK application");
 
-    let image_path = &args[1];
-    let resolution: u32 = args[2].parse().unwrap_or(5);
+    application.connect_activate(|app| {
+        let window = ApplicationWindow::new(app);
+        window.set_title("ASCII Art Converter");
+        window.set_default_size(1280, 720);
+        window.set_position(WindowPosition::Center);
+        window.set_resizable(false);
 
-    let image = match image::open(image_path) {
-        Ok(img) => img,
-        Err(err) => {
-            eprintln!("Error: {}", err);
-            return;
-        }
-    };
+        let text_view = TextView::new();
+        let button = Button::with_label("Select Image");
+        let text_buffer = text_view.get_buffer().expect("Failed to get text buffer");
 
-    let start_time = PreciseTime::now();
-    let ascii_art = convert_to_ascii(image, resolution);
-    let end_time = PreciseTime::now();
+        let window_clone = window.clone();
 
-    println!("Conversion completed in {} milliseconds", start_time.to(end_time).num_milliseconds());
+        button.connect_clicked(move |_| {
+            let file_dialog = FileChooserDialog::new(
+                Some("Select an Image"),
+                                                     Some(&window_clone),
+                                                     FileChooserAction::Open,
+            );
+            file_dialog.add_button("Cancel", gtk::ResponseType::Cancel.into());
+            file_dialog.add_button("Open", gtk::ResponseType::Ok.into());
 
-    if let Err(err) = write_to_file("output.txt", &ascii_art) {
-        eprintln!("Error writing to file: {}", err);
-    } else {
-        println!("ASCII art saved to output.txt");
-    }
+            if file_dialog.run() == gtk::ResponseType::Ok.into() {
+                if let Some(file_path) = file_dialog.get_filename() {
+                    let image = match image::open(&file_path) {
+                        Ok(img) => img,
+                               Err(err) => {
+                                   let err_msg = format!("Error opening image: {}", err);
+                                   let dialog = gtk::MessageDialog::new(
+                                       Some(&window_clone),
+                                                                        gtk::DialogFlags::MODAL,
+                                                                        gtk::MessageType::Error,
+                                                                        gtk::ButtonsType::Ok,
+                                                                        &err_msg,
+                                   );
+                                   dialog.run();
+                                   unsafe { dialog.destroy(); }
+                                   return;
+                               }
+                    };
+
+                    let resolution = 1; // You can adjust this value as needed
+                    let start_time = Instant::now();
+                    let ascii_art = convert_to_ascii(image, resolution);
+                    let end_time = Instant::now();
+
+                    text_buffer.set_text(&ascii_art);
+
+                    println!("Conversion completed in {} milliseconds", (end_time - start_time).whole_milliseconds());
+                }
+            }
+
+            unsafe { file_dialog.destroy(); }
+        });
+
+        let scrolled_window = ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+        scrolled_window.add(&text_view);
+
+        let v_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        v_box.pack_start(&button, false, false, 0);
+        v_box.pack_start(&scrolled_window, true, true, 0);
+
+        window.add(&v_box);
+        window.show_all();
+    });
+
+    application.run(&[]);
 }
-
