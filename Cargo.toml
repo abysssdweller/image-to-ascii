@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-gtk = "0.9.1"
-gio = "0.9.1"
-image = "0.24.1"
-time = "0.2.23"
+gtk = "0.9.0"
+gio = "0.9.0"
+image = "0.23.14"
+time = "0.2.25"
+pango = "0.9.0"

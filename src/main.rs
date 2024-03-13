@@ -7,6 +7,7 @@ use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Button, FileChooserAction, FileChooserDialog, TextView, ScrolledWindow, WindowPosition};
 use gio::prelude::*;
 use image::{DynamicImage, GenericImageView, imageops::FilterType};
+use pango::FontDescription;
 use time::Instant;
 
 const ASCII_CHARS: [char; 11] = ['@', '#', '0', 'O', 'L', ';', ':', '.', ',', '\'', ' '];
@@ -44,6 +45,7 @@ fn main() {
         window.set_resizable(false);
 
         let text_view = TextView::new();
+        let text_view_clone = text_view.clone();
         let button = Button::with_label("Select Image");
         let text_buffer = text_view.get_buffer().expect("Failed to get text buffer");
 
@@ -85,6 +87,10 @@ fn main() {
                     text_buffer.set_text(&ascii_art);
 
                     println!("Conversion completed in {} milliseconds", (end_time - start_time).whole_milliseconds());
+
+                    // Adjusting font size to fit more ASCII art in the window
+                    let font_desc = FontDescription::from_string("Monospace 2");
+                        text_view_clone.override_font(&font_desc);
                 }
             }
 
@@ -104,3 +110,4 @@ fn main() {
 
     application.run(&[]);
 }
+
